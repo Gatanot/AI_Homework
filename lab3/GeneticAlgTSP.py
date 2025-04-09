@@ -1,7 +1,8 @@
 import numpy as np
 import random
 import time
-# 多策略随机选择版本
+import matplotlib.pyplot as plt
+
 
 class GeneticAlgTSP:
     def __init__(self, filename, pop_size=100, mutation_rate=0.5):
@@ -207,8 +208,8 @@ class GeneticAlgTSP:
         :param num_iterations: 迭代次数
         :return: 当前较优解（城市编号列表）
         """
+        start_time = time.time()
         for _ in range(num_iterations):
-            print(f"doing {_} of {num_iterations}", end=" \t")
             # 计算当前种群中每个个体的适应度
             distances = [self._calculate_distance(path) for path in self.population]
             min_dist_idx = np.argmin(distances)
@@ -239,6 +240,62 @@ class GeneticAlgTSP:
                 new_population[i] = mutation_method(new_population[i])
 
             self.population = new_population
-            print(f"Best distance: {self.best_distance}")
+            if _ % 10 == 9:
+                end_time = time.time()
+                execution_time = end_time - start_time
+                start_time = time.time()
+                print(
+                    f"doing {_+1} of {num_iterations}, cost {execution_time:.2f}s, ",
+                    end="",
+                )
+                print(f"value: {self.best_distance:.4f}")
 
         return self.best_solution
+
+    def plot_best_path(self):
+        """
+        绘制最佳路径
+        要求：已运行iterate()方法，确保self.best_solution和self.best_distance有效
+        """
+        if self.best_solution is None:
+            raise ValueError("No best solution found. Please run iterate() first.")
+
+        # 提取最佳路径对应的城市坐标
+        path_coords = self.cities[[city - 1 for city in self.best_solution]]
+        # 闭合路径：回到起点
+        path_coords = np.vstack([path_coords, path_coords[0]])
+
+        # 绘制图形
+        plt.figure(figsize=(10, 6))
+        plt.plot(
+            path_coords[:, 0],
+            path_coords[:, 1],
+            "b-",
+            label=f"Best Path (Distance: {self.best_distance:.2f})",
+        )
+        plt.scatter(self.cities[:, 0], self.cities[:, 1], c="red", label="Cities")
+        plt.title("TSP Best Path")
+        plt.xlabel("X Coordinate")
+        plt.ylabel("Y Coordinate")
+        plt.legend()
+        plt.grid(True)
+        plt.show()
+
+    def save(self, filename, num_iterations):
+        """
+        保存结果到文件
+        """
+        with open("result.md", "a") as f:
+            f.write(f"|{filename}|{num_iterations}|{self.best_distance:.4f}|\n")
+
+
+if __name__ == "__main__":
+    start_time = time.time()
+    ga = GeneticAlgTSP("data\\qa194.tsp")
+    best_path = ga.iterate(6000)  # 迭代10000次
+    print(f"Best path: {best_path}")
+    print(f"Best distance: {ga.best_distance}")
+    end_time = time.time()
+    execution_time = end_time - start_time
+    print(f"程序执行时间: {execution_time:.4f} 秒")
+    ga.plot_best_path()
